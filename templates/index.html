@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Data Logger</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h1>Sensor Data Logger</h1>
+        <button @click="toggleLogging">[[ logging ? 'Stop' : 'Start' ]] Logging</button>
+        <button @click="downloadData">Download Data</button>
+        <p>[[ message ]]</p>
+
+        <table border="1">
+            <tr>
+                <th>Timestamp</th>
+                <th>Pressure (mbar)</th>
+                <th>Pressure (psi)</th>
+                <th>Temperature (C)</th>
+                <th>Temperature (F)</th>
+                <th>Depth (m)</th>
+            </tr>
+            <tr>
+                <td>[[ latestData.timestamp ]]</td>
+                <td>[[ latestData.pressure_mbar.toFixed(2) ]]</td>
+                <td>[[ latestData.pressure_psi.toFixed(2) ]]</td>
+                <td>[[ latestData.temperature_c.toFixed(2) ]]</td>
+                <td>[[ latestData.temperature_f.toFixed(2) ]]</td>
+                <td>[[ latestData.depth_m.toFixed(2) ]]</td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            delimiters: ['[[', ']]'],
+            data: {
+                logging: true,
+                message: 'Logging data...',
+                latestData: {}
+            },
+            methods: {
+                toggleLogging() {
+                    axios.post('/toggle_logging')
+                        .then(response => {
+                            this.logging = response.data.status === 'started';
+                            this.message = this.logging ? 'Logging data...' : 'Logging stopped.';
+                        })
+                        .catch(error => {
+                            console.error('There was an error toggling the logging:', error);
+                        });
+                },
+                downloadData() {
+                    window.location.href = '/download_data';
+                },
+                fetchLatestData() {
+                    axios.get('/latest_data')
+                        .then(response => {
+                            this.latestData = response.data;
+                        })
+                        .catch(error => {
+                            console.error('There was an error fetching the latest data:', error);
+                        });
+                }
+            },
+            mounted() {
+                this.fetchLatestData();
+                setInterval(this.fetchLatestData, 1000); // Fetch latest data every second
+            }
+        });
+    </script>
+</body>
+</html>
