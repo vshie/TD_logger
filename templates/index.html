@@ -12,6 +12,7 @@
         <h1>Sensor Data Logger</h1>
         <button @click="toggleLogging">[[ logging ? 'Stop' : 'Start' ]] Logging</button>
         <button @click="downloadData">Download Data</button>
+        <button @click="confirmDelete">Delete Data</button>
         <p>[[ message ]]</p>
 
         <table border="1">
@@ -55,7 +56,35 @@
                         });
                 },
                 downloadData() {
-                    window.location.href = '/download_data';
+                    axios.get('/download_data')
+                        .then(response => {
+                            if (response.data.status === 'not found') {
+                                this.message = 'No data file found to download.';
+                            } else {
+                                window.location.href = '/download_data';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('There was an error downloading the data:', error);
+                        });
+                },
+                confirmDelete() {
+                    if (confirm("Are you sure you want to delete the data?")) {
+                        this.deleteData();
+                    }
+                },
+                deleteData() {
+                    axios.post('/delete_data')
+                        .then(response => {
+                            if (response.data.status === 'deleted') {
+                                this.message = 'Data deleted successfully.';
+                            } else {
+                                this.message = 'No data file found to delete.';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('There was an error deleting the data:', error);
+                        });
                 },
                 fetchLatestData() {
                     axios.get('/latest_data')
