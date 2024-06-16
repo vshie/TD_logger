@@ -5,6 +5,8 @@ import datetime
 import time
 import csv
 import threading
+import RPi.GPIO as GPIO
+import atexit
 
 app = Flask(__name__)
 data_file = 'sensor_data.csv'
@@ -31,12 +33,35 @@ if not temp_sensor.init():
     print("Temperature sensor could not be initialized")
     exit(1)
 
+# Set up GPIO for the LED
+LED_PIN = 25
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(LED_PIN, GPIO.OUT)
+
+def cleanup():
+    GPIO.cleanup()
+
+atexit.register(cleanup)
+
+def blink_led():
+    while True:
+        if logging:
+            print("LED ON")
+            GPIO.output(LED_PIN, GPIO.HIGH)
+            time.sleep(0.2)
+            print("LED OFF")
+            GPIO.output(LED_PIN, GPIO.LOW)
+            time.sleep(2.8)
+        else:
+            GPIO.output(LED_PIN, GPIO.LOW)
+            time.sleep(1)
+
 def log_data():
     global logging, latest_data
     with open(data_file, mode='a', newline='') as file:
         writer = csv.writer(file)
         # Insert a blank row to separate sessions
-        # writer.writerow([])
+        writer.writerow([])
         while True:
             if logging:
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
@@ -66,8 +91,13 @@ def start_logging_thread():
     thread = threading.Thread(target=log_data)
     thread.start()
 
-# Start the logging thread immediately
+def start_led_blink_thread():
+    thread = threading.Thread(target=blink_led)
+    thread.start()
+
+# Start the logging and LED blink threads immediately
 start_logging_thread()
+start_led_blink_thread()
 
 @app.route('/')
 def index():
@@ -77,6 +107,7 @@ def index():
 def toggle_logging():
     global logging
     logging = not logging
+    print(f"Logging status: {'started' if logging else 'stopped'}")
     return jsonify({'status': 'started' if logging else 'stopped'})
 
 @app.route('/latest_data')
